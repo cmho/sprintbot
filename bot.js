@@ -78,31 +78,46 @@ var bot = controller.spawn(
 ).startRTM();
 
 
-controller.hears(['hello','hi'],'direct_message,direct_mention,mention',function(bot,message) {
+controller.hears(['start sprint'],'direct_message,direct_mention,mention',function(bot,message) {
+	bot.startConversation(message,function(err, convo) {
+		var matches = message.text.match(/start sprint ([0-9]+)([smh])/i);
+		var time = parseInt(matches[1]);
+		var millitime;
+		var unit = matches[2];
+		if (unit == "s") {
+			unit = "second";
+			millitime = time*1000;
+		} else if (unit == "m") {
+			unit = "minute";
+			millitime = time*60000;
+		} else if (unit == "h") {
+			unit = "hour";
+			millitime = time*360000;
+		} else {
+			bot.reply(message, "Time unit not detected; defaulting to minutes.");
+			unit = "minute";
+			millitime = time*60000;
+		}
+		bot.reply(message, "@here A "+time+"-"+unit+" sprint is starting now.");
+		setTimeout(function () {
+			bot.reply(message, "@here Sprint complete! Post your progress.");
+		}, millitime);
+	});
+});
 
-  bot.api.reactions.add({
-    timestamp: message.ts,
-    channel: message.channel,
-    name: 'robot_face',
-  },function(err,res) {
-    if (err) {
-      bot.botkit.log("Failed to add emoji reaction :(",err);
-    }
+controller.hears(['start pomodoro'],'direct_message,direct_mention,mention',function(bot,message) {
+  var matches = message.text.match(/start pomodoro ([0-9]+)m break ([0-9]+)m/i);
+  var time = parseInt(matches[1]);
+  var breaktime = parseInt(matches[2]);
+  var millitime = time*60000;
+  var millibreaktime = breaktime*60000;
+  var pomo_count = 0;
+  bot.startConversation(message,function(err, convo) {
+  	bot.reply(message, "Starting pomodoro session.");
+  	setTimeout(function (){
+  		if 
+  	}, millitime);
   });
-
-
-  controller.storage.users.get(message.user,function(err,user) {
-    if (user && user.name) {
-      bot.reply(message,"Hello " + user.name+"!!");
-    } else {
-      bot.reply(message,"Hello.");
-    }
-  });
-})
-
-controller.hears(['call me (.*)'],'direct_message,direct_mention,mention',function(bot,message) {
-  var matches = message.text.match(/call me (.*)/i);
-  var name = matches[1];
   controller.storage.users.get(message.user,function(err,user) {
     if (!user) {
       user = {
@@ -180,4 +195,18 @@ function formatUptime(uptime) {
 
   uptime = uptime + ' ' + unit;
   return uptime;
+}
+
+function pomodoroWork(time, breaktime, convo, message) {
+	setTimeout(function() {
+		bot.reply(message, "Pomodoro interval complete-time for a "+breaktime+"-minute break.");
+		pomodoroBreak(breaktime*60000, time, message);
+	}, time);
+}
+
+function pomodoroBreak(time, worktime, convo, message) {
+	setTimeout(function () {
+		bot.reply(message, "Break time's over—time for another "+worktime+"-minute work session.");
+		pomodoroWork(worktime*60000, time, message);
+	});
 }
